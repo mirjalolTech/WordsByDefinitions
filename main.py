@@ -2,7 +2,7 @@ import requests
 import uuid # Import uuid for generating unique IDs
 import os # Import os for environment variables
 from telegram import Update, InlineQueryResultArticle, InputTextMessageContent # Import InlineQueryResultArticle
-from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes, CommandHandler, InlineQueryHandler # Import InlineQueryHandler
+from telegram.ext import Application, MessageHandler, filters, ContextTypes, CommandHandler, InlineQueryHandler # Import InlineQueryHandler
 
 BOT_TOKEN = os.getenv("BOT_TOKEN") # Get token from environment variable
 # Check if BOT_TOKEN is set
@@ -45,29 +45,30 @@ async def define(update: Update, context: ContextTypes.DEFAULT_TYPE):
     definition_text = await get_definition_text(word)
     await update.message.reply_text(definition_text)
 
-async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.inline_query.query
     if not query:
         return
 
-    word = query.strip().lower()
-    definition_text = await get_definition_text(word)
-
+    definition_text = await get_definition_text(query)
     results = [
         InlineQueryResultArticle(
             id=str(uuid.uuid4()),
-            title=f"Define: {word}",
+            title=f"Define {query}",
             input_message_content=InputTextMessageContent(definition_text)
         )
     ]
-
     await update.inline_query.answer(results)
 
-app = ApplicationBuilder().token(BOT_TOKEN).build()
-app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("help", help_command))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, define))
-app.add_handler(InlineQueryHandler(inline_query)) # Add InlineQueryHandler
+def main():
+    app = Application.builder().token(BOT_TOKEN).build()
 
-if __name__ == "__main__":
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("help", help_command))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, define))
+    app.add_handler(InlineQueryHandler(inline_query))
+
     app.run_polling()
+
+if __name__ == '__main__':
+    main()
